@@ -4,6 +4,12 @@ seo-jinBro's Dev Blog
 
 ## How to use
 
+Syntax highlighting 문제로 아래를 추가
+
+```bash
+gem install kramdown rouge --user-install
+```
+
 ```bash
 # build
 bundle exec jekyll build
