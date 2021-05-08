@@ -24,7 +24,7 @@ NN 의 예시는 (not Approximate!) 다음과 같다.
   - 검색 연산량: O(N)
   - 메모리: O(1)
     - 하나의 file system 에 벡터를 저장하고 순차적으로 읽는다 가정
-- **k-NN**: 인덱싱 시에 전체 벡터 공간을 `nlist` 개의 그룹으로 나눠서 해당 그룹에서만 찾는 전략
+- **K-means**: 인덱싱 시에 전체 벡터 공간을 `nlist` 개의 그룹으로 나눠서 해당 그룹에서만 찾는 전략
   - 먼저 학습 단계가 필요함. 각 그룹의 중심 벡터, 즉 `centroid` 를 학습 단계에서 구해서 저장 (그룹 내 모든 벡터와 distance 차의 합이 최소)
   - 검색 시에는 쿼리 벡터와 거리가 개별 그룹의 `centroid` 사이의 거리를 계산 후 가장 가까운 그룹을 찾아 그룹 내 벡터와 연산하여 top-k 개의 벡터를 뽑음
   - 검색 연산량: `O(d * (nlist + n/nlist))`
@@ -34,7 +34,7 @@ NN 의 예시는 (not Approximate!) 다음과 같다.
     - `centroid` 를 메모리에 저장, 모든 벡터를 메모리에 저장
   - [어떻게 되는지 설명하는 짤](https://miro.medium.com/max/796/1*Nx6IyGfRAV1ly6uDGnVCxQ.gif)
 
-위에서 언급한 k-NN은 가장 naive 한 방식이고, 실제로는 학습 단계에서 tree 를 구성하는 등의 방법이 있음. 자세히 살펴보진 않았지만 tree 라면 Insert 에서 불리하고, leaf 이외의 개별 노드를 다 메모리에 올리거나 하는 등의 과정이 필요할텐데... 현실적으로 사용이 어려울 것 같음 (실제로 안찾아봐서 정확하진 않으나 생각해보면...)
+위에서 언급한 K-means은 가장 naive 한 방식이고, 실제로는 학습 단계에서 tree 를 구성하는 등의 방법이 있음. 자세히 살펴보진 않았지만 tree 라면 Insert 에서 불리하고, leaf 이외의 개별 노드를 다 메모리에 올리거나 하는 등의 과정이 필요할텐데... 현실적으로 사용이 어려울 것 같음 (실제로 안찾아봐서 정확하진 않으나 생각해보면...)
 
 ### 차원의 저주
 
@@ -53,7 +53,7 @@ Million 스케일에서도 힘든데, Billion 은 당연히 어렵다. 위와 �
 
 - **IVF**
   - **I**n**v**erted **F**ile
-  - 위의 k-NN 에서, 모든 벡터를 메모리에 올리지 않기 위해 최적화할 수 있음. 각 `centroid` 에 file-pointer  를 mapping 해서 (inverted) 해당 위치에 centroid 가 속하는 그룹의 모든 벡터를 append.
+  - 위의 K-means 에서, 모든 벡터를 메모리에 올리지 않기 위해 최적화할 수 있음. 각 `centroid` 에 file-pointer  를 mapping 해서 (inverted) 해당 위치에 centroid 가 속하는 그룹의 모든 벡터를 append.
   - 이 경우 검색 시에 어느 그룹인지를 알면 해당 그룹의 파일만 읽어서 처리하는 것이 가능해져서 메모리 사용량을 줄일 수 있음
   - 그러나 여전히 `centroid` 는 메모리에 저장해야하므로, Milvus 와 같은 분산 인덱스에서 개수가 많아지면 큰 오버헤드로 작용
     - ex) D=1536, nlist=1024 의 경우 필요한 메모리는 `1k * 1536 * 4B = 6MB` 인데 분산 인덱스 개수가 10240개라면 centroid 를 저장하는데만 60GB 를 소요
@@ -61,7 +61,7 @@ Million 스케일에서도 힘든데, Billion 은 당연히 어렵다. 위와 �
   - **P**roduct **Q**uantization
   - IVF 등으로 검색 개수를 줄이더라도 검색시 연산량이 O(n)이고, 해당 그룹 내 벡터를 메모리에 올려야함!
   - 이를 최적화하기 위해 아래와 같은 작업을 수행
-    - 모든 벡터를 m 개의 subvector 로 쪼개고, 각 sub-vector 들에 대해 k-NN 을 수행
+    - 모든 벡터를 m 개의 subvector 로 쪼개고, 각 sub-vector 들에 대해 K-means 을 수행
     - sub-vector 들이 속한 group 에 id 를 부여하는데, **d bits** 로 표현한다면 sub-vector 마다 **2^d 개의 id** 가 생김
     - sub-vector 의 Cartesian 곱으로 각 벡터가 **2^d^m 개의 group** 으로 분리됨
       - ex) [0.0, 1.0, ... , 1535.0] ⇒ [5, 243, 15, ... , 47] 과 같은 sub-vector id 들의 튜플로 표현 가능
@@ -71,10 +71,10 @@ Million 스케일에서도 힘든데, Billion 은 당연히 어렵다. 위와 �
       - 각 벡터를 표현하는데는 sub-vector 의 id 만 저장하면 되므로 `m * d bits`
         - m=32, d=8 인 경우 **한 벡터당 겨우 32Bytes !**
       - e.g.) D=1536, m=32, d=8 인 경우 표현 가능한 group 은 **2^40** 인데 사용하는 메모리 량은 `1536 * 2^8 * 4Bytes ⇒ 1.5MB` 로 가능
-        - k-NN 이었다면 `1536 * 2^40 * 4Bytes => 6TB`
+        - K-means 이었다면 `1536 * 2^40 * 4Bytes => 6TB`
     - IVF_PQ
       - 위의 두개를 합한 형태인데 아래 그림으로 표현 가능
-        - coarse quantizer 로 먼저 k-NN 을 수행하는데, 원래 차원을 그대로 유지하면서 nlist 개 만큼의 그룹으로 나눔
+        - coarse quantizer 로 먼저 K-means 을 수행하는데, 원래 차원을 그대로 유지하면서 nlist 개 만큼의 그룹으로 나눔
         - 아래 그림과 같이 r(y) 에서 PQ 를 계산해서, 각 sub-vector 의 centroid id list (== code) 를 ivf 에 추가
       - 검색 시에는 다음과 같이 처리 (여기서는 논문 상의 ADC, 비대칭 계산이에요.)
         - 우선 쿼리 벡터와 ivf 에서 사용된 centroid 들과 거리 계산 후 정렬
