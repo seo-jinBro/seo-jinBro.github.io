@@ -29,7 +29,7 @@ gem install kramdown rouge --user-install
 
 ```bash
 # build
-bundle exec jekyll build
+bundle exec jekyll build (--watch)
 
 # run
 bundle exec jekyll serve
