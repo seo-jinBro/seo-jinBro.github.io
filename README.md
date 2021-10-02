@@ -4,11 +4,28 @@ seo-jinBro's Dev Blog
 
 ## How to use
 
-Syntax highlighting 문제로 아래를 추가
+우선, rbenv 설치
 
 ```bash
+# install rbenv
+brew install rbenv ruby-build
+rbenv install 2.6.8
+rbenv global 2.6.8
+
+# 아래 라인을 .zshrc 에 추가
+$(rbenv init -)
+
+# install bundler
+gem install bundler
+
+# install packages
+bundle
+
+# Syntax highlighting 문제로 아래를 추가
 gem install kramdown rouge --user-install
 ```
+
+그 다음, 직접 실행해보려면 아래 실행
 
 ```bash
 # build
