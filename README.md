@@ -13,7 +13,7 @@ rbenv install 2.6.8
 rbenv global 2.6.8
 
 # 아래 라인을 .zshrc 에 추가
-$(rbenv init -)
+eval $(rbenv init - zsh)
 
 # install bundler
 gem install bundler
@@ -29,7 +29,7 @@ gem install kramdown rouge --user-install
 
 ```bash
 # build
-bundle exec jekyll build (--watch)
+bundle exec jekyll build --watch --incremental
 
 # run
 bundle exec jekyll serve
